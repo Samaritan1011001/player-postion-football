@@ -15,6 +15,17 @@ def create_connection(db_file):
 
     return conn
 
+def collect():
+    return
+    # es_player_attributes = pd.read_sql_query("SELECT * FROM Player_Attributes", conn)
+    # # print(f"es_player_attributes -> {es_player_attributes}")
+    # fifa_df = pd.read_csv("data/data.csv")
+    # fifa_df = fifa_df.rename(columns={"ID":"player_fifa_api_id"})
+    # # print(f'fifa_df -> {fifa_df}')
+    #
+    # mergeDf = es_player_attributes.merge(fifa_df[["player_fifa_api_id","Position"]])
+    # print(f'mergeDf -> {mergeDf}')
+    # mergeDf.to_sql("player_position",con =conn)
 
 def main():
     database = r"data/database.sqlite"
@@ -23,12 +34,13 @@ def main():
     with conn:
         print("Successful")
         cur = conn.cursor()
-        df = pd.read_sql_query("SELECT * FROM Player_Attributes", conn)
-        print(df["positioning"])
-        # iterating the columns
-        # for col in df.columns:
-        #     print(col)
+        player_position_df = pd.read_sql_query("SELECT * FROM player_position", conn)
+        print(f"player_position_df -> {player_position_df}")
 
+        player_position_df = player_position_df.dropna(axis=0, subset=['Position'])
+        print(f"player_position_df size-> {player_position_df}")
+        print(f"unique position values -> {player_position_df.Position.unique()}")
+        print(f"null values -> {player_position_df.isna().sum()}")
 
 if __name__ == "__main__":
     main()
