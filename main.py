@@ -47,10 +47,15 @@ def main():
     player_position_df = pd.read_csv("data/final_data.csv")
     player_position_df = player_position_df.dropna(axis=0, subset=['Position'])
     print(f"player_position_df -> {player_position_df}")
+    print(f'features -> {player_position_df.columns}')
+    drop_list = ["index","id",'player_fifa_api_id', 'player_api_id','date',]
+    player_position_df = player_position_df.drop(drop_list,axis=1)
+    print(f"player_position_df -> {player_position_df}")
+
     # data_stats(player_position_df=player_position_df)
     # impute_object_columns(player_position_df)
     # impute_float_columns(player_position_df)
-    # player_position_df.to_csv("data/final_data.csv",index=False)
+    # player_position_df.to_csv("data/no_ids_data.csv",index=False)
 
 
 def data_stats(player_position_df):
