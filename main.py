@@ -10,6 +10,14 @@ from impyute.imputation.cs import fast_knn
 sys.setrecursionlimit(100000) #Increase the recursion limit of the OS
 
 
+from sklearn.compose import ColumnTransformer
+from sklearn.datasets import fetch_openml
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split, GridSearchCV
+
 def create_connection(db_file):
     """ create a database connection to the SQLite database
         specified by the db_file
@@ -44,20 +52,58 @@ def collect():
 
 def main():
     # collect(conn)
-    player_position_df = pd.read_csv("data/no_ids_data.csv")
+    player_position_df = pd.read_csv("data/all_float_data.csv")
     player_position_df = player_position_df.dropna(axis=0, subset=['Position'])
 
     print(f"player_position_df -> {player_position_df}")
     player_position_df = rearrange_columns(player_position_df)
-    print(f'features -> {player_position_df.columns}')
-    # print(f'{player_position_df.overall_rating.max()}')
-    # plot_attr_distribution(player_position_df,"graphs")
+    print(f'features -> {player_position_df}')
 
+
+
+    # one_hot_encode(player_position_df["Position"].tolist())
+
+    # plot_attr_distribution(player_position_df,"graphs")
+    # player_position_df = convert_obj_float(player_position_df)
     # player_position_df = drop_unwanted_columns(player_position_df)
     # data_stats(player_position_df=player_position_df)
     # impute_object_columns(player_position_df)
     # impute_float_columns(player_position_df)
-    # player_position_df.to_csv("data/no_ids_data.csv",index=False)
+    # player_position_df.to_csv("data/all_float_data.csv",index=False)
+
+def one_hot_encode(data):
+    # data = player_position_df["Position"].tolist()
+    values = np.array(data)
+    print(values)
+    # integer encode
+    label_encoder = LabelEncoder()
+    integer_encoded = label_encoder.fit_transform(values)
+    print(integer_encoded)
+    # binary encode
+    onehot_encoder = OneHotEncoder(sparse=False)
+    integer_encoded = integer_encoded.reshape(len(integer_encoded), 1)
+    onehot_encoded = onehot_encoder.fit_transform(integer_encoded)
+    print(len(onehot_encoded[0]))
+    # # invert first example
+    # inverted = label_encoder.inverse_transform([np.argmax(onehot_encoded[0, :])])
+    # print(inverted)
+
+    # onehot_encoded_df = pd.DataFrame({"Position":onehot_encoded})
+    # player_position_df.update(onehot_encoded_df)
+    # print(f'features -> {player_position_df.Position}')
+    return onehot_encoded
+
+def convert_obj_float(player_position_df):
+    player_position_df = player_position_df.replace({"preferred_foot": {"right": 1.0, "left": 2.0}})
+
+    unwanted_column_values = ['1', '_0', '0', '2', '3', 'o', '7', 'ormal', '6', '9', '5',
+                              '4']
+    player_position_df = player_position_df[~player_position_df.defensive_work_rate.isin(unwanted_column_values)]
+    player_position_df = player_position_df.replace({"defensive_work_rate": {"low": 1.0, "medium": 2.0, "high": 3.0}})
+
+    player_position_df = player_position_df[~player_position_df.attacking_work_rate.isin(["None"])]
+    player_position_df = player_position_df.replace({"attacking_work_rate": {"low": 1.0, "medium": 2.0, "high": 3.0}})
+    return player_position_df
 
 def rearrange_columns(player_position_df):
     rearranged_columns = [
@@ -111,7 +157,7 @@ def plot_attr_distribution(player_position_df,graph_directory):
     ax.text(17, 100, 'Defend Attributes', color='blue', weight='bold')
     ax.text(33, 100, 'Mixed Attributes', color='green', weight='bold')
 
-    plt.savefig(graph_directory + "/line_plot_after_norm.png")
+    # plt.savefig(graph_directory + "/line_plot_after_norm.png")
     plt.show()
 
 
