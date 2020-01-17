@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt  # Plotting
 import numpy as np
 import sys
 from impyute.imputation.cs import fast_knn
-sys.setrecursionlimit(100000) #Increase the recursion limit of the OS
 
+sys.setrecursionlimit(100000)  # Increase the recursion limit of the OS
 
 from sklearn.compose import ColumnTransformer
 from sklearn.datasets import fetch_openml
@@ -17,6 +17,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split, GridSearchCV
+
 
 def create_connection(db_file):
     """ create a database connection to the SQLite database
@@ -42,10 +43,10 @@ def collect():
         cur = conn.cursor()
         es_player_attributes = pd.read_sql_query("SELECT * FROM Player_Attributes", conn)
         fifa_df = pd.read_csv("data/data.csv")
-        fifa_df = fifa_df.rename(columns={"ID":"player_fifa_api_id"})
-        mergeDf = es_player_attributes.merge(fifa_df[["player_fifa_api_id","Position"]])
+        fifa_df = fifa_df.rename(columns={"ID": "player_fifa_api_id"})
+        mergeDf = es_player_attributes.merge(fifa_df[["player_fifa_api_id", "Position"]])
         print(f'mergeDf -> {mergeDf}')
-        mergeDf.to_sql("player_position",con =conn,if_exists='replace')
+        mergeDf.to_sql("player_position", con=conn, if_exists='replace')
         # player_position_df = pd.read_sql_query("SELECT * FROM player_position", conn)
     return
 
@@ -59,8 +60,23 @@ def main():
     player_position_df = rearrange_columns(player_position_df)
     print(f'features -> {player_position_df}')
 
+    df_new_normalized = player_position_df.iloc[:, :-1].div(player_position_df.iloc[:, :-1].sum(axis=1), axis=0)
+    mapping = {'ST': 1, 'RW': 1, 'RCM': 1, 'LCM': 1, 'LS': 1,'LW': 1,'CF': 1, 'RS': 1, 'CAM': 1, 'RAM': 1,'LF': 1,'RF': 1,'LAM': 1, 'CDM': 0, 'RCB': 0, 'LDM': 0,
+               'RDM': 0, 'LCB': 0,'LB': 0,'CB': 0,'RWB': 0,'RB': 0,'LWB': 0,'RM': 0,'LM': 0,'CM': 0, 'GK': 0}
+    df_new_normalized['Position'] = player_position_df['Position']
+    df_new_normalized = df_new_normalized.replace({'Position': mapping})
+    print(f'df_new_normalized -> {df_new_normalized.Position.unique()}')
+    X_train, X_test, y_train, y_test = train_test_split(df_new_normalized.iloc[:, :-1], df_new_normalized.iloc[:, -1],
+                                                        random_state=0)
 
+    print('X train shape: {}'.format(X_train.shape))
+    print('X test shape: {}'.format(X_test.shape))
+    print('y train shape: {}'.format(y_train.shape))
+    print('y test shape: {}'.format(y_test.shape))
 
+    clf = LogisticRegression().fit(X_train, y_train)
+    acc = clf.score(X_test, y_test)
+    print('Logistic Regression Accuracy: {}'.format(acc))
     # one_hot_encode(player_position_df["Position"].tolist())
 
     # plot_attr_distribution(player_position_df,"graphs")
@@ -70,6 +86,7 @@ def main():
     # impute_object_columns(player_position_df)
     # impute_float_columns(player_position_df)
     # player_position_df.to_csv("data/all_float_data.csv",index=False)
+
 
 def one_hot_encode(data):
     # data = player_position_df["Position"].tolist()
@@ -93,6 +110,7 @@ def one_hot_encode(data):
     # print(f'features -> {player_position_df.Position}')
     return onehot_encoded
 
+
 def convert_obj_float(player_position_df):
     player_position_df = player_position_df.replace({"preferred_foot": {"right": 1.0, "left": 2.0}})
 
@@ -105,27 +123,31 @@ def convert_obj_float(player_position_df):
     player_position_df = player_position_df.replace({"attacking_work_rate": {"low": 1.0, "medium": 2.0, "high": 3.0}})
     return player_position_df
 
+
 def rearrange_columns(player_position_df):
     rearranged_columns = [
 
         # Attacking attributes
-        'attacking_work_rate',
+        # 'attacking_work_rate',
         'crossing', 'finishing',
         'volleys', 'dribbling', 'curve', 'free_kick_accuracy',
-        'long_passing', 'ball_control', 'acceleration', 'sprint_speed','agility', 'reactions',  'shot_power',
+        'ball_control', 'acceleration', 'sprint_speed', 'agility', 'reactions', 'shot_power',
         'long_shots', 'penalties',
 
         # Defensive attributes
-        'defensive_work_rate', 'jumping', 'strength', 'interceptions', 'marking',
-        'stamina', 'vision',
-        'standing_tackle', 'sliding_tackle', 'gk_diving', 'gk_handling', 'gk_kicking', 'gk_positioning', 'gk_reflexes',
+        # 'defensive_work_rate',
+        'jumping', 'strength', 'interceptions', 'marking', 'stamina', 'vision', 'long_passing', 'standing_tackle',
+        'sliding_tackle', 'gk_diving', 'gk_handling', 'gk_kicking', 'gk_positioning', 'gk_reflexes',
 
         # Mixed attributes
-        'overall_rating', 'aggression', 'balance', 'positioning','heading_accuracy','short_passing', 'potential',
+        # 'short_passing'
+        'overall_rating', 'aggression', 'balance', 'positioning', 'heading_accuracy',  'potential',
         'preferred_foot', 'Position']
+    # ]
     return player_position_df[rearranged_columns]
 
-def plot_attr_distribution(player_position_df,graph_directory):
+
+def plot_attr_distribution(player_position_df, graph_directory):
     fig, ax = plt.subplots()
     df_new_ST = player_position_df[player_position_df['Position'] == 'ST'].iloc[::200, :-1]
     df_new_ST = df_new_ST.select_dtypes(float)
@@ -162,8 +184,8 @@ def plot_attr_distribution(player_position_df,graph_directory):
 
 
 def drop_unwanted_columns(player_position_df):
-    drop_list = ["index","id",'player_fifa_api_id', 'player_api_id','date',]
-    player_position_df = player_position_df.drop(drop_list,axis=1)
+    drop_list = ["index", "id", 'player_fifa_api_id', 'player_api_id', 'date', ]
+    player_position_df = player_position_df.drop(drop_list, axis=1)
     print(f"player_position_df -> {player_position_df}")
     return player_position_df
 
@@ -178,21 +200,21 @@ def data_stats(player_position_df):
 
 
 def impute_object_columns(player_position_df):
-    player_position_df =  player_position_df.apply(lambda x: x.fillna(x.mode().iloc[0]))
+    player_position_df = player_position_df.apply(lambda x: x.fillna(x.mode().iloc[0]))
     return player_position_df
 
 
 def impute_float_columns(player_position_df):
     imputed_values = fast_knn(player_position_df.select_dtypes(float).values, k=30)
-    float_df = pd.DataFrame(imputed_values,columns=list(player_position_df.select_dtypes('float64').columns))
+    float_df = pd.DataFrame(imputed_values, columns=list(player_position_df.select_dtypes('float64').columns))
     player_position_df.update(float_df)
     return player_position_df
 
 
-def get_heatmap(df,graph_directory):
+def get_heatmap(df, graph_directory):
     sns.heatmap(df.isnull(), yticklabels=False, cbar=False, cmap='viridis')
     plt.tight_layout()
-    plt.savefig(graph_directory  +"/heatmap.png")
+    plt.savefig(graph_directory + "/heatmap.png")
     plt.show()
 
 
